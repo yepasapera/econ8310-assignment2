@@ -18,16 +18,16 @@ y = train_data['meal']  # Target variable
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
 # Initialize the DecisionTreeClassifier with a max depth of 5 (you can adjust this)
-clf = DecisionTreeClassifier(max_depth=5)
+model = DecisionTreeClassifier(max_depth=5)
 
 # Train the model using the training data
-clf.fit(X_train, y_train)
+model.fit(X_train, y_train)
 
 # Save the model for future predictions
-joblib.dump(clf, 'meal_predictor_model.pkl')
+joblib.dump(model, 'meal_predictor_model.pkl')
 
 # Predict the target on the test set
-predictions = clf.predict(X_test)
+predictions = model.predict(X_test)
 
 # Convert predictions to binary values (1 or 0)
 pred = [1 if pred == 1 else 0 for pred in predictions]
