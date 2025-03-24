@@ -1,70 +1,50 @@
 import pandas as pd
-import numpy as np
-from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
+import joblib  # For saving the model
 
-# Load data
-data = pd.read_csv("assignment2train.csv")
+# Load the training data
+train_data = pd.read_csv("assignment2train.csv")
 
-# Check column names to verify 'meal' exists
-print("Columns in dataset:", data.columns)
+# Check for any missing values
+print(train_data.isnull().sum())
 
-# Check for missing values
-print(f"Missing values in meal column: {data['meal'].isna().sum()}")
+# Select features (products sold) and the target variable (meal purchase)
+X = train_data.drop(columns=['id', 'DateTime', 'meal'])  # Excluding non-relevant columns
+y = train_data['meal']  # Target variable
 
-# Handle missing labels
-data = data.dropna(subset=['meal'])  # Drop rows where meal is NaN
+# Split the data into training and test sets (70% train, 30% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Drop non-relevant columns
-data = data.drop(columns=['id', 'DateTime'], errors='ignore')
+# Initialize the DecisionTreeClassifier with a max depth of 5 (you can adjust this)
+clf = DecisionTreeClassifier(max_depth=5)
 
-# Define target and features
-Y = data['meal']
-X = data.drop('meal', axis=1)
+# Train the model using the training data
+clf.fit(X_train, y_train)
 
-# Convert categorical variables if any (not needed here, but good practice)
-X = X.apply(pd.to_numeric, errors='coerce').fillna(0)  # Ensure all numeric
+# Save the model for future predictions
+joblib.dump(clf, 'meal_predictor_model.pkl')
 
-# Split data
-x, xt, y, yt = train_test_split(X, Y, test_size=0.1, random_state=42, stratify=Y)
+# Predict the target on the test set
+predictions = clf.predict(X_test)
 
-# Initialize model
-model = XGBClassifier(n_estimators=50, max_depth=3, learning_rate=0.5, objective='binary:logistic')
+# Convert predictions to binary values (1 or 0)
+pred = [1 if pred == 1 else 0 for pred in predictions]
 
-# Train model
-modelFit = model.fit(x, y)
+# Evaluate the accuracy of the model
+acc = accuracy_score(y_test, pred)
+print("Model accuracy is {:.2f}%.".format(acc * 100))
 
-# Predict on test data
-pred = model.predict(xt)
-
-# Load new test data for predictions
+# Load new test data (which should have the same features as the training data)
 test_data = pd.read_csv("assignment2test.csv")
-test_data = test_data.drop(columns=['id', 'DateTime'], errors='ignore')  # Drop unnecessary columns
-test_data = test_data.apply(pd.to_numeric, errors='coerce').fillna(0)  # Convert to numeric
 
-# Ensure test data columns match training features
-missing_cols = set(X.columns) - set(test_data.columns)
-extra_cols = set(test_data.columns) - set(X.columns)
+# Ensure that the test data has the same structure as the training data (drop 'id', 'DateTime')
+X_new = test_data.drop(columns=['id', 'DateTime', 'meal'])  # Exclude 'meal' from test data
 
-print(f"Columns in training set but missing in test set: {missing_cols}")
-print(f"Columns in test set but missing in training set: {extra_cols}")
+# Load the saved model and make predictions
+model = joblib.load('meal_predictor_model.pkl')
+new_predictions = model.predict(X_new)
 
-# Add missing columns to test_data with default values (0)
-for col in missing_cols:
-    test_data[col] = 0
-
-# Drop extra columns from test_data
-test_data = test_data[X.columns]  # Reorder columns to match training set
-
-# Make predictions for test set
-test_predictions = model.predict(test_data)
-
-# Make predictions for test set
-test_predictions = model.predict(test_data)
-
-# Print accuracy score
-print(f"Accuracy score: {accuracy_score(yt, pred) * 100:.2f}%")
-
-# Save predictions
-pd.DataFrame({"meal_prediction": test_predictions}).to_csv("meal_predictions.csv", index=False)
+# Output predictions (1 for meal, 0 for no meal)
+print(new_predictions)
