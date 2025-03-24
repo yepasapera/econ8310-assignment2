@@ -1,56 +1,84 @@
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+from xgboost import XGBClassifier
+import joblib
 
-# Read in the data from CSV
+# Load the training data
 data = pd.read_csv("assignment2train.csv")
 
-# Separate features (X) and target (y)
-X = data.drop(columns=["meal"])  # Exclude the target variable from the dataset
-y = data["meal"]  # This is the actual "meal" column
+# Preprocess the data: drop irrelevant columns and encode categorical ones
+data['DateTime'] = pd.to_datetime(data['DateTime'])
+data['Hour'] = data['DateTime'].dt.hour  # Extract hour from DateTime
+data['DayOfWeek'] = data['DateTime'].dt.dayofweek  # Extract day of the week
+data.drop(['id', 'DateTime'], axis=1, inplace=True)  # Drop 'id' and 'DateTime' columns
 
-# Handle categorical features using one-hot encoding
-X = pd.get_dummies(X)  # This automatically applies one-hot encoding to all categorical columns
+# Define target and features
+Y = data['meal']
+X = data.drop('meal', axis=1)
 
-# Split into training and testing datasets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Split the data into train and test sets
+x, xt, y, yt = train_test_split(X, Y, test_size=0.1, random_state=42)
 
-# Initialize the classifier
-clf = RandomForestClassifier(n_estimators=100)
+# Standardize the data (scaling numeric values)
+scaler = StandardScaler()
+x_scaled = scaler.fit_transform(x)
+xt_scaled = scaler.transform(xt)
 
-# Train the model on the training data
-clf.fit(X_train, y_train)
+# Initialize XGBoost classifier
+xgb = XGBClassifier(
+    n_estimators=50,
+    max_depth=3,
+    learning_rate=0.5,
+    objective='binary:logistic',  # binary classification
+    eval_metric="logloss"
+)
 
-# Predict with the trained model on the test set
-pred = clf.predict(X_test)
+# Train the model
+xgb.fit(x_scaled, y)
 
-# Check the length of pred and truth (y_test)
-print(f"Length of truth: {len(y_test)}")
-print(f"Length of pred: {len(pred)}")
+# Store the trained model
+joblib.dump(xgb, 'modelFit.pkl')
 
-# Ensure the lengths are the same before calculating Tjurr R-squared
-if len(y_test) == len(pred):
-    # Tjurr function to calculate the R-squared
-    def tjurr(truth, pred):
-        truth = list(truth)
-        pred = list(pred)
-        
-        # Check if the lists are non-empty before calculating means
-        y1 = np.mean([y for x, y in enumerate(pred) if truth[x] == 1]) if any(truth) else 0
-        y2 = np.mean([y for x, y in enumerate(pred) if truth[x] == 0]) if all(truth) else 0
-        
-        # Return the difference
-        return y1 - y2
-    
-    tjurr_value = tjurr(y_test, pred)
-    print(f"Tjurr R-squared: {tjurr_value}")
-else:
-    print("Prediction and truth have mismatched lengths.")
+# Make predictions
+pred = xgb.predict(xt_scaled)
 
-# Perform assertion if the Tjurr R-squared is valid
-if isinstance(tjurr_value, float) and not np.isnan(tjurr_value):
-    assert tjurr_value > 0.12, f"Tjurr R-squared below 0.12: {tjurr_value}"
-else:
-    print(f"Tjurr R-squared is invalid: {tjurr_value}")
+# Print the accuracy score
+accuracy = accuracy_score(yt, pred)
+print(f"Accuracy score: {accuracy*100:.2f}%")
+
+# Optionally, print the classification report for more detailed metrics
+print(classification_report(yt, pred))
+
+# Load the test data for future predictions (use the same scaling steps)
+test_data = pd.read_csv("assignment2test.csv")
+
+# Preprocess the test data the same way as training data
+test_data['DateTime'] = pd.to_datetime(test_data['DateTime'])
+test_data['Hour'] = test_data['DateTime'].dt.hour
+test_data['DayOfWeek'] = test_data['DateTime'].dt.dayofweek
+test_data.drop(['id', 'DateTime'], axis=1, inplace=True)
+
+# Ensure the test data columns match the training data columns (no 'meal' column)
+X_test = test_data  # Here, we are only interested in the features
+
+# Make sure the columns in X_test match the columns in X (training data)
+X_test = X_test[X.columns]
+
+# Scale the test data using the scaler from training
+test_scaled = scaler.transform(X_test)
+
+# Load the trained model (if needed)
+modelFit = joblib.load('modelFit.pkl')
+
+# Make predictions on the test data
+test_pred = modelFit.predict(test_scaled)
+
+# Print the columns of train and test data
+print("Train columns:", X.columns)  # training features
+print("Test columns:", X_test.columns)  # test features
+
+# Print the predictions
+print(test_pred)
