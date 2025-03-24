@@ -29,11 +29,12 @@ xt_scaled = scaler.transform(xt)
 
 # Initialize XGBoost classifier
 xgb = XGBClassifier(
-    n_estimators=50,
-    max_depth=3,
-    learning_rate=0.5,
+    n_estimators=100,  # Increased number of estimators
+    max_depth=5,       # Increased max depth for more complex decision boundaries
+    learning_rate=0.1,  # Lower learning rate for more gradual learning
     objective='binary:logistic',  # binary classification
-    eval_metric="logloss"
+    eval_metric="logloss",  # Logloss to evaluate
+    scale_pos_weight=1  # Use for imbalanced classes (adjust if needed)
 )
 
 # Store the model as 'model' (this is important for the autograder)
