@@ -36,14 +36,17 @@ xgb = XGBClassifier(
     eval_metric="logloss"
 )
 
+# Store the model as 'model' (this is important for the autograder)
+model = xgb
+
 # Train the model
-xgb.fit(x_scaled, y)
+model.fit(x_scaled, y)
 
 # Store the trained model
-joblib.dump(xgb, 'modelFit.pkl')
+joblib.dump(model, 'modelFit.pkl')
 
 # Make predictions
-pred = xgb.predict(xt_scaled)
+pred = model.predict(xt_scaled)
 
 # Print the accuracy score
 accuracy = accuracy_score(yt, pred)
