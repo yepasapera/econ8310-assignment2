@@ -79,6 +79,12 @@ modelFit = joblib.load('modelFit.pkl')
 # Make predictions on the test data
 test_pred = modelFit.predict(test_scaled)
 
+pred = model.predict(test_scaled)
+
+# Make sure the predictions are a list or numpy array with numeric values
+if isinstance(pred, np.ndarray):  # If predictions are numpy array
+    pred = pred.tolist()  # Convert to list if necessary
+
 # Print the columns of train and test data
 print("Train columns:", X.columns)  # training features
 print("Test columns:", X_test.columns)  # test features
