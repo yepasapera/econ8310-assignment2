@@ -6,78 +6,73 @@ from sklearn.metrics import accuracy_score, classification_report
 from xgboost import XGBClassifier
 import joblib
 
-# Load the training data
+# training data
 data = pd.read_csv("assignment2train.csv")
 
-# Preprocess the data: drop irrelevant columns and encode categorical ones
+# process and encode data, extract datetime
 data['DateTime'] = pd.to_datetime(data['DateTime'])
-data['Hour'] = data['DateTime'].dt.hour  # Extract hour from DateTime
-data['DayOfWeek'] = data['DateTime'].dt.dayofweek  # Extract day of the week
-data.drop(['id', 'DateTime'], axis=1, inplace=True)  # Drop 'id' and 'DateTime' columns
+data['Hour'] = data['DateTime'].dt.hour 
+data['DayOfWeek'] = data['DateTime'].dt.dayofweek  
+data.drop(['id', 'DateTime'], axis=1, inplace=True)
 
-# Define target and features
+# target
 Y = data['meal']
 X = data.drop('meal', axis=1)
 
-# Split the data into train and test sets
+# Split data as week 6
 x, xt, y, yt = train_test_split(X, Y, test_size=0.1, random_state=42)
-
-# Standardize the data (scaling numeric values)
 scaler = StandardScaler()
 x_scaled = scaler.fit_transform(x)
 xt_scaled = scaler.transform(xt)
 
-# Initialize XGBoost classifier
+# XGBoost classifier
 xgb = XGBClassifier(
-    n_estimators=100,  # Increased number of estimators
-    max_depth=5,       # Increased max depth for more complex decision boundaries
-    learning_rate=0.1,  # Lower learning rate for more gradual learning
-    objective='binary:logistic',  # binary classification
-    eval_metric="logloss",  # Logloss to evaluate
-    scale_pos_weight=1  # Use for imbalanced classes (adjust if needed)
+    n_estimators=100,
+    max_depth=5,
+    learning_rate=0.1,
+    objective='binary:logistic',
+    eval_metric="logloss",
+    scale_pos_weight=1
 )
 
-# Store the model as 'model' (this is important for the autograder)
+# Store the model
 model = xgb
-
-# Train the model
+# Train model
 model.fit(x_scaled, y)
 
-# Store the trained model
+# Store trained model
 joblib.dump(model, 'modelFit.pkl')
 
-# Make predictions
+#predict
 pred = model.predict(xt_scaled)
 
 # Print the accuracy score
 accuracy = accuracy_score(yt, pred)
 print(f"Accuracy score: {accuracy*100:.2f}%")
 
-# Optionally, print the classification report for more detailed metrics
-print(classification_report(yt, pred))
+#print the classification report
+#print(classification_report(yt, pred))
 
-# Load the test data for future predictions (use the same scaling steps)
+# Load test data
 test_data = pd.read_csv("assignment2test.csv")
 
-# Preprocess the test data the same way as training data
+# process test data
 test_data['DateTime'] = pd.to_datetime(test_data['DateTime'])
 test_data['Hour'] = test_data['DateTime'].dt.hour
 test_data['DayOfWeek'] = test_data['DateTime'].dt.dayofweek
 test_data.drop(['id', 'DateTime'], axis=1, inplace=True)
 
-# Ensure the test data columns match the training data columns (no 'meal' column)
-X_test = test_data  # Here, we are only interested in the features
+# column test to test data
+X_test = test_data
 
-# Make sure the columns in X_test match the columns in X (training data)
+#x_test equals test datak, scale test data
 X_test = X_test[X.columns]
-
-# Scale the test data using the scaler from training
 test_scaled = scaler.transform(X_test)
 
-# Load the trained model (if needed)
+# Load the trained model
 modelFit = joblib.load('modelFit.pkl')
 
-# Make predictions on the test data
+# predict
 test_pred = modelFit.predict(test_scaled)
 
 pred = model.predict(test_scaled)
@@ -87,8 +82,8 @@ if isinstance(pred, np.ndarray):  # If predictions are numpy array
     pred = pred.tolist()  # Convert to list if necessary
 
 # Print the columns of train and test data
-print("Train columns:", X.columns)  # training features
-print("Test columns:", X_test.columns)  # test features
+#print("Train columns:", X.columns) 
+#print("Test columns:", X_test.columns)
 
 # Print the predictions
 print(test_pred)
